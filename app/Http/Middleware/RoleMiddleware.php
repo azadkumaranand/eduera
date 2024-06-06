@@ -16,8 +16,16 @@ class RoleMiddleware
      */
     public function handle(Request $request, Closure $next, $role=null): Response
     {
-        if (Auth::check() && in_array($role, [Auth::user()->role, 'admin'])) {
-            return $next($request);
+        if(Auth::check()){
+            $user = Auth::user();
+            if($user->role == $role || $user->role=='admin'){
+                if($role=='teacher' && $user->id != 1){
+                    return response()->json([
+                        'message'=>'Admin don\'t allow you to access this resource now'
+                    ]);
+                }
+                return $next($request);
+            }
         }
 
         // User doesn't have the required role (or not logged in)

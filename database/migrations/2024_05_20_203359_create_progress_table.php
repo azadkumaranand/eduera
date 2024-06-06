@@ -11,13 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('progress', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('student_id')->constrained('users')->onDelete('cascade');
-            $table->foreignId('chapter_id')->constrained('chapters')->onDelete('cascade');
-            $table->unsignedTinyInteger('progress');
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('progress')) {
+            Schema::create('progress', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('student_id')->constrained('users')->onDelete('cascade');
+                $table->foreignId('chapter_id')->constrained('chapters')->onDelete('cascade');
+                $table->unsignedTinyInteger('progress');
+                $table->timestamps();
+            });
+        }
+        
     }
 
     /**

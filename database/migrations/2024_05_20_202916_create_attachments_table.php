@@ -11,14 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('attachments', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('course_id')->constrained('courses')->onDelete('cascade');
-            $table->string('thumbnail');
-            $table->string('notes')->nullable();
-            $table->string('video');
-            $table->timestamps();
-        });
+        if(!Schema::hasTable('attachments')){
+            Schema::create('attachments', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('course_id')->constrained('courses')->onDelete('cascade');
+                $table->string('thumbnail');
+                $table->string('notes')->nullable();
+                $table->string('video');
+                $table->timestamps();
+            });
+        }
     }
 
     /**

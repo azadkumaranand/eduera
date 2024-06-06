@@ -7,6 +7,7 @@ use App\Models\Course;
 use App\Models\Chapter;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class CourseController extends Controller
 {
@@ -37,9 +38,8 @@ class CourseController extends Controller
             'description'=>'required|string',
             'price'=>'required|numeric',
         ]);
-        // return response()->json([
-        //     'message'=>"Your form is going to store",
-        // ]);
+        // return $request;
+        $imagePath = $request->file('thumbnail')->store('public/thumbnails');
         DB::beginTransaction();
         try {
             $course = Course::create([
@@ -47,6 +47,7 @@ class CourseController extends Controller
                 'description'=>$request->description,
                 'teacher_id'=>Auth::id(),
                 'price'=>$request->price,
+                'thumbnail'=>$imagePath
             ]);
             DB::commit();
             return redirect()->route('courses.index')->with('success', 'Course created successfully!');
@@ -81,17 +82,33 @@ class CourseController extends Controller
     {
         $request->validate([
             'title' => 'required|string|max:255',
-            'description'=>'required|string',
-            'price'=>'required|numeric',
+            'description' => 'required|string',
+            'price' => 'required|numeric',
         ]);
-        
+
         $course = Course::find(base64_decode($id));
+        
+        if ($course && $course->thumbnail) {
+            if (Storage::disk('public')->exists($course->thumbnail)) {
+                // Delete previous image from the server
+                Storage::disk('public')->delete($course->thumbnail);
+            }
+        }
+
+        if ($request->hasFile('thumbnail')) {
+            $imagePath = $request->file('thumbnail')->store('thumbnails', 'public');
+            $course->thumbnail = $imagePath;
+        }
+
         $course->title = $request->title;
         $course->description = $request->description;
         $course->price = $request->price;
+        $course->status = $request->status;
         $course->save();
-        return redirect()->back();
+
+        return redirect()->back()->with('success', 'Course Updated Successfully!');
     }
+
 
     /**
      * Remove the specified resource from storage.

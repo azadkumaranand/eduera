@@ -7,16 +7,24 @@
         {{-- <img src="" class="card-img-top" alt="..."> --}}
         <div class="card-body">
           <p class="card-title">
-            {{$test->title}}: {{$test->test_type}}
+            {!!$test->title!!}
           </p>
           <p class="card-text">
             {!!$test->description!!}
           </p>
-          <a href="{{route('teacher.test.customize', ['id'=>$test->id])}}">
-            <button class="btn btn-dark">
-              Customize
-            </button>
-          </a>
+          <div class="d-sm-flex">
+            <a href="{{route('teacher.test.customize', ['id'=>$test->id])}}">
+              <button class="btn btn-dark me-2">
+                Customize
+              </button>
+            </a>
+            <a href="{{route('test.mcq.result')}}">
+              <button class="btn btn-dark">
+                Result
+              </button>
+            </a>
+          </div>
+          
         </div>
       </div>
     @endforeach

@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use App\Models\Chapter;
-use App\Models\Attachment;
+use App\Models\ChapterContent;
 use Illuminate\Support\Facades\DB;
 
 
@@ -37,32 +37,16 @@ class ChapterController extends Controller
         $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'thumbnail' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'video' => 'required|mimes:mp4,mov,ogg,qt|max:20000',
             'course_id' => 'required|exists:courses,id',
         ]);
-
-        $thumbnailPath = $request->file('thumbnail')->store('thumbnails', 'public');
-        $videoPath = $request->file('video')->store('videos', 'public');
 
         $chapter = Chapter::create([
             'title' => $request->title,
             'description' => $request->description,
             'course_id' => $request->course_id,
         ]);
-        $attachment = Attachment::create([
-            'course_id' => $request->course_id,
-            'chapter_id'=> $chapter->id,
-            'thumbnail' => $thumbnailPath,
-            'video' => $videoPath,
-        ]);
 
-        return response()->json([
-            'title' => $chapter->title,
-            'description' => $chapter->description,
-            'thumbnail_url' => Storage::url($attachment->thumbnail),
-            'video_url' => Storage::url($attachment->video),
-        ]);
+        return redirect()->route('chapter.customize', ['id'=>base64_encode($request->course_id)])->with('success', 'Chapter Created Successfully!');
     }
 
     /**
@@ -78,9 +62,38 @@ class ChapterController extends Controller
      */
     public function edit(string $id)
     {   
-        $chapter = Chapter::find(base64_decode($id));
-        $attachment = Attachment::where('chapter_id', base64_decode($id))->first();
-        return view('teacher.customize.chapter', ['chapter'=>$chapter, 'attachment'=>$attachment]);
+        // $chapter = Chapter::find(base64_decode($id));
+        $chapter = Chapter::where('chapters.id', '=', base64_decode($id))
+                            ->join('chapter_contents', 'chapters.id', 'chapter_contents.chapter_id')
+                            ->select(
+                                'chapters.title as chapter_title',
+                                'chapters.description as chapter_desc',
+                                'chapter_contents.title as content_title',
+                                'chapter_contents.body as content_desc',
+                                'chapters.id as chapter_id',
+                                'chapter_contents.id as content_id',
+                                'chapters.course_id as course_id'
+                            )
+                            ->get();
+        
+        if(count($chapter)<=0){
+            $chapter = Chapter::findorfail(base64_decode($id));
+            // $content = 
+            // return $chapter;
+            
+            $modifiedarray = (object)[
+                'chapter_id'=>$chapter->id,
+                'chapter_title'=>$chapter->title,
+                'chapter_desc'=>$chapter->description,
+                'course_id'=>$chapter->course_id
+            ];
+            $newarr = [$modifiedarray];
+            // return $newarr;
+            return view('teacher.customize.chapter', ['chapter'=>$newarr]);
+        }
+        // return $chapter;
+
+        return view('teacher.customize.chapter', ['chapter'=>$chapter]);
     }
 
     /**
@@ -97,7 +110,6 @@ class ChapterController extends Controller
     // ]);
 
     $chapter = Chapter::find($id);
-    $attachment = Attachment::where('chapter_id', $id)->first();
 
     DB::beginTransaction();
 
@@ -111,25 +123,11 @@ class ChapterController extends Controller
         $chapter->description = $request->description;
         $chapter->save();
 
-        // Delete old files from storage
-        Storage::disk('public')->delete($attachment->thumbnail);
-        Storage::disk('public')->delete($attachment->video);
-
-        // Store new files in storage
-        $thumbnailPath = $request->file('thumbnail')->store('thumbnails', 'public');
-        $videoPath = $request->file('video')->store('videos', 'public');
-
-        // Update attachment details
-        $attachment->video = $videoPath;
-        $attachment->thumbnail = $thumbnailPath;
-        $attachment->save();
-
         DB::commit();
 
         return response()->json([
             'message' => 'Woo! Chapter has been updated.',
             'chapter' => $chapter,
-            'attachment' => $attachment,
         ], 200);
     } catch (\Exception $e) {
         DB::rollBack();
@@ -147,5 +145,11 @@ class ChapterController extends Controller
     public function destroy(string $id)
     {
         //
+    }
+
+    public function contentCustomize(string $id){
+        $content = ChapterContent::findorfail(base64_decode($id));
+        // return $content;
+        return view('teacher.customize.content', ['content'=>$content]);
     }
 }
